@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Photo Lab - 3D Digital Album Studio</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #070709 radial-gradient(circle at center, #15151f 0%, #070709 100%);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background: rgba(17, 17, 22, 0.9);
+            border-bottom: 1px solid #222;
+            z-index: 10;
+        }
+
+        .logo { font-size: 18px; font-weight: bold; color: #E6CA65; }
+        .album-title { text-align: center; font-size: 16px; color: #ccc; }
+        .album-title span { color: #E6CA65; font-weight: bold; display: block; font-size: 14px; }
+
+        .auth-section { display: flex; gap: 10px; align-items: center; }
+        .btn { background: #E6CA65; color: #000; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn:hover { background: #d4b855; }
+
+        .setup-container {
+            max-width: 500px;
+            margin: auto;
+            padding: 30px;
+            background: #121218;
+            border-radius: 12px;
+            border: 1px solid #2a2a35;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #1b1b22; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }
+
+        .stage {
+            perspective: 1600px;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .book-container {
+            width: 800px;
+            height: 400px;
+            position: relative;
+            transform-style: preserve-3d;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9);
+            border-radius: 4px;
+            background: #111;
+        }
+
+        .sheet {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0;
+            transform-style: preserve-3d;
+            transform-origin: left center;
+            transition: transform 0.9s cubic-bezier(0.645, 0.045, 0.355, 1);
+            cursor: pointer;
+        }
+
+        .sheet img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 2px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.4);
+        }
+
+        .sheet.flipped { transform: rotateY(-180deg); }
+
+        .dock {
+            background: rgba(11, 11, 15, 0.95);
+            border-top: 1px solid #222;
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            z-index: 10;
+        }
+
+        .thumb {
+            width: 50px;
+            height: 30px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.5;
+            border: 2px solid transparent;
+            transition: 0.2s;
+        }
+        .thumb.active { opacity: 1; border-color: #E6CA65; transform: scale(1.05); }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content { background: #121218; padding: 30px; border-radius: 10px; text-align: center; border: 1px solid #333; }
+        #qrcode { background: #fff; padding: 10px; width: fit-content; margin: 15px auto; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">⭐ Star Photo Lab</div>
+        <div class="album-title">
+            <span id="header-couple">Wedding Album</span>
+            Digital 3D Spread Viewer
+        </div>
+        <div class="auth-section">
+            <button class="btn" onclick="openQRModal()" id="share-btn" style="display:none;">🔗 Share & QR</button>
+            <a href="/auth/google"><button class="btn" style="background:#333; color:#E6CA65;">Google Connected</button></a>
+        </div>
+    </header>
+
+    <div class="stage" id="setup-stage">
+        <div class="setup-container">
+            <h2>Digital Album Studio</h2>
+            <p style="color:#aaa; font-size:14px;">Google Drive folder se album sheets load karein.</p>
+            <input type="text" id="project-name" placeholder="New Project Name (e.g. Rahul_weds_Priya)">
+            <button class="btn" style="width:100%; margin-top:10px;" onclick="createProject()">Create Drive Folder</button>
+            
+            <hr style="border-color:#2a2a35; margin:20px 0;">
+            
+            <input type="text" id="folder-id" placeholder="Enter Google Drive Folder ID">
+            <button class="btn" style="width:100%; background:#222; color:#E6CA65; border:1px solid #E6CA65;" onclick="loadProject()">Load 3D Album</button>
+        </div>
+    </div>
+
+    <div class="stage" id="viewer-stage" style="display:none;" onclick="turnNext()">
+        <div class="book-container" id="book"></div>
+    </div>
+
+    <div class="dock" id="filmstrip" style="display:none;"></div>
+
+    <div class="modal" id="qr-modal">
+        <div class="modal-content">
+            <h3>Scan QR to View Album</h3>
+            <div id="qrcode"></div>
+            <button class="btn" onclick="closeQRModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let images = [];
+        let currentIndex = 0;
+
+        async function createProject() {
+            const projectName = document.getElementById('project-name').value;
+            if(!projectName) return alert('Project name dalein!');
+            const res = await fetch('/api/create-project', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ projectName })
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert('Folder Created! Folder ID: ' + data.folderId);
+                document.getElementById('folder-id').value = data.folderId;
+            } else {
+                alert('Error: ' + data.error);
+            }
+        }
+
+        async function loadProject() {
+            const folderId = document.getElementById('folder-id').value;
+            if(!folderId) return alert('Folder ID dalein!');
+
+            const res = await fetch(`/api/project/${folderId}`);
+            const data = await res.json();
+            if(data.success) {
+                images = data.files;
+                if(images.length === 0) return alert('Is folder me koi images nahi mili!');
+                
+                document.getElementById('setup-stage').style.display = 'none';
+                document.getElementById('viewer-stage').style.display = 'flex';
+                document.getElementById('filmstrip').style.display = 'flex';
+                document.getElementById('share-btn').style.display = 'block';
+
+                buildBook();
+                generateQRCode(folderId);
+            } else {
+                alert('Error loading project: ' + data.error);
+            }
+        }
+
+        function buildBook() {
+            const book = document.getElementById('book');
+            const filmstrip = document.getElementById('filmstrip');
+            book.innerHTML = '';
+            filmstrip.innerHTML = '';
+
+            images.forEach((img, index) => {
+                const sheet = document.createElement('div');
+                sheet.className = 'sheet';
+                sheet.style.zIndex = images.length - index;
+                sheet.innerHTML = `<img src="${img.directUrl}" alt="${img.name}">`;
+                sheet.onclick = (e) => { e.stopPropagation(); turnPage(index); };
+                book.appendChild(sheet);
+
+                const thumb = document.createElement('img');
+                thumb.className = `thumb ${index === 0 ? 'active' : ''}`;
+                thumb.src = img.directUrl;
+                thumb.onclick = () => turnPage(index);
+                filmstrip.appendChild(thumb);
+            });
+        }
+
+        function turnPage(index) {
+            currentIndex = index;
+            const sheets = document.querySelectorAll('.sheet');
+            const thumbs = document.querySelectorAll('.thumb');
+
+            sheets.forEach((sheet, idx) => {
+                if (idx <= currentIndex) sheet.classList.add('flipped');
+                else sheet.classList.remove('flipped');
+            });
+
+            thumbs.forEach((thumb, idx) => {
+                if (idx === currentIndex) thumb.classList.add('active');
+                else thumb.classList.remove('active');
+            });
+        }
+
+        function turnNext() {
+            if (currentIndex < images.length - 1) turnPage(currentIndex + 1);
+            else turnPage(0);
+        }
+
+        function generateQRCode(folderId) {
+            document.getElementById('qrcode').innerHTML = "";
+            const shareUrl = window.location.origin + "/?project=" + folderId;
+            new QRCode(document.getElementById("qrcode"), { text: shareUrl, width: 150, height: 150 });
+        }
+
+        function openQRModal() { document.getElementById('qr-modal').style.display = 'flex'; }
+        function closeQRModal() { document.getElementById('qr-modal').style.display = 'none'; }
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const projId = params.get('project');
+            if(projId) {
+                document.getElementById('folder-id').value = projId;
+                loadProject();
+            }
+        }
+    </script>
+</body>
+</html>
