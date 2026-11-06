@@ -7,11 +7,11 @@ const cors = require('cors');
 const app = express();
 app.use(express.json());
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'Public')));
 
 const CLIENT_ID = process.env.CLIENT_ID || "1081371104056-1pblrjipaasn78nnb7slcp18o2355dn3.apps.googleusercontent.com";
 const CLIENT_SECRET = process.env.CLIENT_SECRET || "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";
-const REDIRECT_URI = process.env.REDIRECT_URI || "http://localhost:3000/oauth2callback";
+const REDIRECT_URI = process.env.REDIRECT_URI || "https://digital-alubm-qr.onrender.com/oauth2callback";
 
 const oauth2Client = new google.auth.OAuth2(
   CLIENT_ID,
